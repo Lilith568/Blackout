@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  Blackout – offline document redaction.
+  The Content-Security-Policy below is the technical core of the privacy promise:
+  connect-src 'none' means this page cannot make a single network request,
+  even if a dependency were malicious. Everything stays on this device.
+-->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; worker-src 'self' blob:; connect-src 'none'; font-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Blackout – redact documents offline</title>
+<link rel="stylesheet" href="app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23111'/%3E%3Crect x='7' y='13' width='18' height='6' fill='%23f2f2f2'/%3E%3C/svg%3E">
+</head>
+<body>
+<noscript><p class="noscript">Blackout needs JavaScript – all processing happens locally in your browser, nothing is uploaded.</p></noscript>
+
+<header class="top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <h1>Blackout</h1>
+    <span class="tag" data-i18n="tagline">Redact documents. Offline. Permanently.</span>
+  </div>
+  <div class="top-right">
+    <span id="netstatus" class="pill" title="Network requests are blocked by Content-Security-Policy">
+      <span class="dot"></span><span data-i18n="offline">no network</span>
+    </span>
+    <select id="lang" aria-label="Language">
+      <option value="en">EN</option>
+      <option value="de">DE</option>
+      <option value="es">ES</option>
+      <option value="fr">FR</option>
+      <option value="ru">RU</option>
+      <option value="fa">FA</option>
+      <option value="ar">AR</option>
+      <option value="tr">TR</option>
+      <option value="uk">UK</option>
+      <option value="zh">ZH</option>
+    </select>
+  </div>
+</header>
+
+<main id="app">
+  <!-- ========== Start screen ========== -->
+  <section id="start" class="panel start">
+    <div id="dropzone" class="dropzone" tabindex="0" role="button">
+      <p class="big" data-i18n="drop">Drop a PDF or image here</p>
+      <p data-i18n="or">or</p>
+      <label class="btn primary">
+        <span data-i18n="choose">Choose file</span>
+        <input id="file" type="file" accept="application/pdf,image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden>
+      </label>
+      <p class="small muted" data-i18n="formats">PDF, PNG, JPEG, WebP · multiple pages supported</p>
+    </div>
+
+    <div class="promise">
+      <h2 data-i18n="promise_h">What this tool guarantees</h2>
+      <ul>
+        <li data-i18n="p1">Nothing leaves your device. The page's security policy forbids every network request – you can verify this in your browser's developer tools.</li>
+        <li data-i18n="p2">Redactions are permanent. The output is rebuilt from pixels; redacted text, hidden layers, form fields and comments cannot be recovered.</li>
+        <li data-i18n="p3">Metadata is gone. Author, software, GPS location, timestamps and document IDs are not copied into the output.</li>
+        <li data-i18n="p4">It works with the cable unplugged. Save this page and use it on an air-gapped computer.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ========== Editor ========== -->
+  <section id="editor" class="editor hidden">
+    <aside class="side">
+      <div class="group">
+        <h3 data-i18n="file_h">File</h3>
+        <div id="fileinfo" class="fileinfo"></div>
+        <details id="metabox" class="meta">
+          <summary data-i18n="meta_h">Metadata found in original</summary>
+          <dl id="metalist"></dl>
+          <p class="small muted" data-i18n="meta_note">None of this will be in the exported file.</p>
+        </details>
+      </div>
+
+      <div class="group">
+        <h3 data-i18n="auto_h">Suggested redactions</h3>
+        <p class="small muted" data-i18n="auto_note">Detected in the document's text layer. Review every suggestion – detection is never complete. Scanned documents have no text layer; mark them by hand.</p>
+        <div id="patterns" class="patterns"></div>
+        <button id="applyAuto" class="btn" data-i18n="apply_auto">Add all selected</button>
+      </div>
+
+      <div class="group">
+        <h3 data-i18n="tools_h">Tools</h3>
+        <div class="toolrow">
+          <button id="toolBox" class="btn tool active" data-i18n="tool_box">Draw box</button>
+          <button id="toolErase" class="btn tool" data-i18n="tool_erase">Remove box</button>
+        </div>
+        <label class="row"><span data-i18n="fill">Fill</span>
+          <select id="fillmode">
+            <option value="black" data-i18n="fill_black">Black</option>
+            <option value="white" data-i18n="fill_white">White</option>
+            <option value="noise" data-i18n="fill_noise">Noise</option>
+          </select>
+        </label>
+        <label class="row"><span data-i18n="margin">Margin (px)</span>
+          <input id="margin" type="number" min="0" max="40" value="3">
+        </label>
+        <button id="undo" class="btn" data-i18n="undo">Undo</button>
+        <button id="clearAll" class="btn danger" data-i18n="clear">Remove all boxes</button>
+        <p class="small"><span id="boxcount">0</span> <span data-i18n="boxes">boxes</span></p>
+      </div>
+
+      <div class="group">
+        <h3 data-i18n="export_h">Export</h3>
+        <label class="row"><span data-i18n="quality">Resolution</span>
+          <select id="dpi">
+            <option value="110">110 dpi</option>
+            <option value="150" selected>150 dpi</option>
+            <option value="200">200 dpi</option>
+            <option value="300">300 dpi</option>
+          </select>
+        </label>
+        <label class="row"><span data-i18n="grayscale">Grayscale</span><input id="gray" type="checkbox"></label>
+        <button id="exportPdf" class="btn primary" data-i18n="export_pdf">Download redacted PDF</button>
+        <button id="exportPng" class="btn" data-i18n="export_png">Download pages as PNG</button>
+        <p class="small muted" data-i18n="export_note">Output contains only flattened images. No text layer, no metadata, no history.</p>
+      </div>
+
+      <div class="group">
+        <button id="close" class="btn" data-i18n="close">Close document</button>
+        <p class="small muted" data-i18n="close_note">Closing the tab also wipes everything – nothing is stored.</p>
+      </div>
+    </aside>
+
+    <div class="stage">
+      <div class="pagebar">
+        <button id="prev" class="btn">‹</button>
+        <span><span data-i18n="page">Page</span> <span id="pagenum">1</span> / <span id="pagecount">1</span></span>
+        <button id="next" class="btn">›</button>
+        <span class="spacer"></span>
+        <label class="row"><span data-i18n="zoom">Zoom</span>
+          <input id="zoom" type="range" min="0.4" max="2.5" step="0.1" value="1">
+        </label>
+      </div>
+      <div id="viewport" class="viewport">
+        <div id="pagewrap" class="pagewrap">
+          <canvas id="page"></canvas>
+          <canvas id="overlay"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>Blackout · <a href="https://github.com/lilith568/blackout">source</a> · Apache-2.0 ·
+  <span data-i18n="foot">free software, no accounts, no tracking</span></span>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
