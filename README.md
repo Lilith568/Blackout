@@ -10,7 +10,7 @@ Blackout is a single web page that lets journalists, human rights defenders, law
 - **Air-gap ready.** Save the page (`Ctrl+S`, "Web page, complete") and run it from a USB stick on a machine that has never seen the internet.
 - **Small and auditable.** One HTML file, one CSS file, two JavaScript files you can read in an afternoon, plus [pdf.js](https://github.com/mozilla/pdf.js) from Mozilla for rendering. No build step, no framework, no telemetry, no accounts.
 
-[Try it](https://lilith568.github.io/blackout/) · [Threat model](THREAT_MODEL.md) · [Contributing](CONTRIBUTING.md)
+[Threat model](THREAT_MODEL.md) · [Contributing](CONTRIBUTING.md)
 
 ## Who is this for
 
@@ -26,7 +26,7 @@ The common thread: the person cannot or must not upload the file to a "free onli
 
 ## How to use it
 
-1. Open `index.html` (or the hosted page). Drop a PDF, PNG, JPEG or WebP onto it.
+1. Open `index.html` in your browser. Drop a PDF, PNG, JPEG or WebP onto it.
 2. Look at the **Metadata** panel – it lists what the original file reveals about you.
 3. If the PDF has a text layer, Blackout suggests redactions for IBANs, e-mail addresses, phone numbers, card numbers, links, IP addresses and (optionally) dates, ID-like numbers and capitalised names. Tick what applies and press *Add all selected*. **Always review**: pattern matching is a help, not a guarantee.
 4. Draw additional boxes with the mouse or finger. *Remove box* deletes one, *Undo* steps back.
